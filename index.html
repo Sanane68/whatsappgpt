@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UEC WhatsApp • ChatGPT</title>
+<style>
+  :root{ --bg:#0b141a; --panel:#111b21; --panel-light:#202c33; --accent:#00a884; --accent-2:#25d366; --text:#e9edef; --muted:#8696a0; --in:#202c33; --out:#005c4b; }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text);}
+  .app{display:grid; grid-template-columns: 340px 1fr; height:100vh;}
+  .sidebar{background:#111b21; border-right:1px solid #2a3942; display:flex; flex-direction:column}
+  .sidebar .topbar{display:flex; align-items:center; gap:12px; padding:14px; border-bottom:1px solid #2a3942}
+  .avatar{width:40px; height:40px; border-radius:50%; background:#2a3942; display:grid; place-items:center; font-weight:600}
+  .search{padding:10px 14px;}
+  .search input{width:100%; padding:10px 14px; border-radius:8px; border:1px solid #2a3942; background:#0c1b22; color:var(--text)}
+  .chats{overflow:auto}
+  .chat-item{display:flex; align-items:center; gap:12px; padding:12px 14px; cursor:pointer; border-bottom:1px solid #1f2c33}
+  .chat-item:hover{background:#0e1e25}
+  .chat-item.active{background:#0d1a20}
+  .chat-item .title{font-weight:600}
+  .chat-item .subtitle{font-size:12px; color:var(--muted)}
+  .main{display:flex; flex-direction:column; background: url('data:image/svg+xml;utf8,\
+  <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">\
+  <defs>\
+    <pattern id="p" width="80" height="80" patternUnits="userSpaceOnUse">\
+      <path d="M0 80 L80 0" stroke="%232a3942" stroke-width="0.5" opacity="0.2"/>\
+      <circle cx="10" cy="10" r="1" fill="%232a3942" opacity="0.3"/>\
+      <circle cx="40" cy="40" r="1" fill="%232a3942" opacity="0.3"/>\
+    </pattern>\
+  </defs>\
+  <rect width="100%" height="100%" fill="url(%23p)"/>\
+  </svg>') center/contain repeat;}
+  .top{display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--panel); border-left:1px solid #2a3942; border-bottom:1px solid #2a3942}
+  .top .title{display:flex; align-items:center; gap:12px}
+  .top .name{font-weight:700}
+  .top .status{font-size:12px; color:var(--muted)}
+  .icons{display:flex; gap:8px; align-items:center}
+  .icon-btn{width:36px; height:36px; display:grid; place-items:center; border-radius:50%; background:transparent; border:none; color:var(--text); cursor:pointer}
+  .icon-btn:hover{background:#18252c}
+  .messages{flex:1; overflow:auto; padding:20px 24px; display:flex; flex-direction:column; gap:10px}
+  .bubble{max-width:70%; padding:8px 10px; border-radius:10px; position:relative; line-height:1.35; box-shadow:0 1px 0 rgba(0,0,0,0.2)}
+  .bubble.in{align-self:flex-start; background:var(--in); border-top-left-radius:2px}
+  .bubble.out{align-self:flex-end; background:var(--out); border-top-right-radius:2px}
+  .meta{display:flex; gap:8px; align-items:center; margin-top:4px; font-size:11px; color:#b0c2c9; opacity:0.9}
+  .composer{display:flex; align-items:center; gap:8px; padding:10px; background:var(--panel); border-top:1px solid #2a3942}
+  .composer .field{flex:1; display:flex; align-items:center; gap:8px; background:#0c1b22; border:1px solid #2a3942; border-radius:999px; padding:8px 12px}
+  .composer input{flex:1; background:transparent; border:none; outline:none; color:var(--text); font-size:15px}
+  .send{width:42px; height:42px; border-radius:50%; background:var(--accent); border:none; color:#071b14; font-weight:700; cursor:pointer}
+  .send:disabled{opacity:.6; cursor:not-allowed}
+  .tag{font-size:11px; color:var(--muted)}
+  .badge{background:var(--accent); color:#00241b; font-weight:700; font-size:10px; padding:2px 6px; border-radius:999px}
+  .settings{position:fixed; right:16px; bottom:16px; background:var(--panel); border:1px solid #2a3942; border-radius:16px; padding:14px; width:320px; box-shadow:0 10px 40px rgba(0,0,0,.4)}
+  .settings h3{margin:0 0 8px}
+  .settings label{display:block; font-size:12px; color:var(--muted); margin-top:10px}
+  .settings input, .settings select, .settings textarea{width:100%; padding:10px; border-radius:8px; border:1px solid #2a3942; background:#0c1b22; color:var(--text)}
+  .settings small{color:var(--muted)}
+  .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:20px; background:#0c1b22; border:1px solid #2a3942; padding:10px 14px; border-radius:10px; color:var(--text)}
+  .dot{width:6px; height:6px; border-radius:50%; background:#4ade80; display:inline-block}
+  .typing{display:flex; align-items:center; gap:6px}
+  .typing .dot{animation:b 1s infinite}
+  .typing .dot:nth-child(2){animation-delay:.15s}
+  .typing .dot:nth-child(3){animation-delay:.3s}
+  @keyframes b{0%,80%,100%{opacity:.2}40%{opacity:1}}
+  .link{color:var(--accent-2); text-decoration:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SOL: Sohbet listesi (dekoratif) -->
+  <aside class="sidebar">
+    <div class="topbar">
+      <div class="avatar">S</div>
+      <div>
+        <div style="font-weight:700">Sabri</div>
+        <div class="tag">UEC WhatsApp</div>
+      </div>
+      <div style="margin-left:auto; display:flex; gap:8px">
+        <button class="icon-btn" title="Ayarlar" onclick="toggleSettings()">⚙️</button>
+      </div>
+    </div>
+    <div class="search"><input placeholder="Ara veya yeni sohbet"/></div>
+    <div class="chats" id="chatList"></div>
+  </aside>
+
+  <!-- SAĞ: Aktif sohbet -->
+  <main class="main">
+    <div class="top">
+      <div class="title">
+        <div class="avatar" style="background:#075e54">🤖</div>
+        <div>
+          <div class="name">ChatGPT</div>
+          <div class="status" id="status">çevrimiçi</div>
+        </div>
+      </div>
+      <div class="icons">
+        <button class="icon-btn" title="Ara">🔍</button>
+        <button class="icon-btn" title="Sesli arama">📞</button>
+        <button class="icon-btn" title="Görüntülü arama">🎥</button>
+        <button class="icon-btn" title="Daha fazla">⋮</button>
+      </div>
+    </div>
+
+    <div id="messages" class="messages"></div>
+
+    <div class="composer">
+      <button class="icon-btn" title="Ek">📎</button>
+      <div class="field">
+        <input id="input" placeholder="Mesaj yaz" onkeydown="if(event.key==='Enter'){send()}" />
+      </div>
+      <button id="sendBtn" class="send" onclick="send()">➤</button>
+    </div>
+  </main>
+</div>
+
+<!-- Ayarlar kutusu -->
+<div id="settings" class="settings" style="display:none">
+  <h3>ChatGPT Bağlantı</h3>
+  <label>OpenAI API Key (tarayıcıda yerel kalır)</label>
+  <input id="apiKey" type="password" placeholder="sk-..." />
+  <label>Model</label>
+  <select id="model">
+    <option value="gpt-4o-mini">gpt-4o-mini (hızlı/ucuz)</option>
+    <option value="gpt-4o">gpt-4o</option>
+    <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+  </select>
+  <label>Sistem Mesajı</label>
+  <textarea id="systemPrompt" rows="3">Sen WhatsApp benzeri arayüzde çalışan yardımcı bir asistansın. Kısa ve net yanıtlar ver.</textarea>
+  <div style="display:flex; gap:8px; margin-top:10px">
+    <button onclick="saveSettings()" class="send" style="width:auto; padding:10px 14px">Kaydet</button>
+    <button onclick="clearHistory()" class="icon-btn" style="border:1px solid #2a3942; border-radius:8px; width:auto; padding:8px 12px">Geçmişi Temizle</button>
+  </div>
+  <small style="display:block; margin-top:8px">⚠️ Güvenlik: API anahtarını frontend'e koymak güvenli değildir. Bu demo, <b>kendi anahtarını yalnızca bu tarayıcıda</b> kullanman içindir. Yayınlama/dağıtım için bir <a class="link" target="_blank" href="https://platform.openai.com/docs/guides/production-best-practices">sunucu proxy</a> kullan.</small>
+</div>
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+  // --- Basit durum ---
+  const $ = (s)=>document.querySelector(s);
+  const messagesEl = $('#messages');
+  const inputEl = $('#input');
+  const statusEl = $('#status');
+
+  const state = {
+    apiKey: localStorage.getItem('uec_apiKey') || '',
+    model: localStorage.getItem('uec_model') || 'gpt-4o-mini',
+    system: localStorage.getItem('uec_system') || 'Sen WhatsApp benzeri arayüzde çalışan yardımcı bir asistansın. Kısa ve net yanıtlar ver.',
+    history: JSON.parse(localStorage.getItem('uec_history')||'[]'),
+    typing: false,
+  };
+
+  $('#apiKey').value = state.apiKey;
+  $('#model').value = state.model;
+  $('#systemPrompt').value = state.system;
+
+  function toast(msg){const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2000)}
+  function toggleSettings(){ const el=$('#settings'); el.style.display = el.style.display==='none'?'block':'none'; }
+  function saveSettings(){ state.apiKey=$('#apiKey').value.trim(); state.model=$('#model').value; state.system=$('#systemPrompt').value; localStorage.setItem('uec_apiKey',state.apiKey); localStorage.setItem('uec_model',state.model); localStorage.setItem('uec_system',state.system); toast('Ayarlar kaydedildi'); }
+  function clearHistory(){ state.history=[]; localStorage.removeItem('uec_history'); render(); toast('Sohbet geçmişi temizlendi'); }
+
+  // Örnek sol liste
+  const sampleChats=[{name:'ChatGPT', last:'Her şeye hazırım!', time:'Şimdi', unread:0}];
+  const chatListEl = document.getElementById('chatList');
+  chatListEl.innerHTML = sampleChats.map(c=>`<div class="chat-item active"><div class="avatar">🤖</div><div style="flex:1"><div class="title">${c.name}</div><div class="subtitle">${c.last}</div></div><div style="text-align:right"><div class="subtitle">${c.time}</div>${c.unread?`<div class='badge'>${c.unread}</div>`:''}</div></div>`).join('');
+
+  // Mesaj oluşturucu
+  function msgTemplate(m){
+    const time = new Date(m.t||Date.now());
+    const hh = String(time.getHours()).padStart(2,'0');
+    const mm = String(time.getMinutes()).padStart(2,'0');
+    return `<div class="bubble ${m.role==='user'?'out':'in'}">${escapeHtml(m.content)}<div class="meta">${hh}:${mm}${m.role==='assistant' && m.stream?'<span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>':''}</div></div>`
+  }
+
+  function escapeHtml(s){ return s.replace(/[&<>\"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])) }
+
+  function render(){ messagesEl.innerHTML = state.history.map(msgTemplate).join(''); messagesEl.scrollTop=messagesEl.scrollHeight }
+
+  // İlk karşılama
+  if(state.history.length===0){ state.history.push({role:'assistant', content:'Merhaba! ChatGPT ile WhatsApp tarzı bu sohbette konuşabilirsin. Sağ alttan ⚙️ ile anahtarını gir.', t:Date.now()}); saveHistory(); }
+  render();
+
+  function saveHistory(){ localStorage.setItem('uec_history', JSON.stringify(state.history)); }
+
+  async function send(){
+    const text = inputEl.value.trim();
+    if(!text) return;
+    if(!state.apiKey){ toast('⚠️ Önce API anahtarını Ayarlar’dan gir.'); toggleSettings(); return; }
+    inputEl.value='';
+    state.history.push({role:'user', content:text, t:Date.now()});
+    state.history.push({role:'assistant', content:'', t:Date.now(), stream:true});
+    render();
+    try{
+      await streamChat(state.system, state.model, state.apiKey);
+    }catch(err){
+      console.error(err);
+      replaceLastAssistant("Üzgünüm, bir hata oluştu. ("+(err?.message||'bilinmiyor')+")");
+    } finally { saveHistory(); }
+  }
+
+  function replaceLastAssistant(text){
+    for(let i=state.history.length-1;i>=0;i--){ if(state.history[i].role==='assistant'){ state.history[i].content=text; state.history[i].stream=false; break; } }
+    render();
+  }
+
+  // OpenAI Chat Completions — SSE benzeri "stream": false kullanıp parça parça okumak yerine, fetch body reader kullanalım.
+  async function streamChat(system, model, apiKey){
+    statusEl.textContent='yazıyor…';
+    const messages = [ {role:'system', content: system}, ...state.history.filter(m=>m.role!=='system').map(m=>({role:m.role, content:m.content})) ].slice(-20);
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+apiKey },
+      body: JSON.stringify({ model, messages, temperature: 0.7, stream: true })
+    });
+
+    if(!res.ok){ const errorText = await res.text(); throw new Error(errorText || ('HTTP '+res.status)); }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer='';
+
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buffer += decoder.decode(value, {stream:true});
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for(const p of parts){
+        const line = p.trim();
+        if(!line) continue;
+        // Server-Sent Events 'data: {json}' formatı
+        if(line.startsWith('data: ')){
+          const payload = line.slice(6);
+          if(payload === '[DONE]'){ break; }
+          try{
+            const j = JSON.parse(payload);
+            const delta = j.choices?.[0]?.delta?.content || '';
+            if(delta){
+              // Son assistant balonuna ekle
+              for(let i=state.history.length-1;i>=0;i--){
+                const m = state.history[i];
+                if(m.role==='assistant'){ m.content += delta; break; }
+              }
+              render();
+            }
+          }catch(e){ /* yut */ }
+        }
+      }
+    }
+    // stream bitti → stream flag kaldır
+    replaceLastAssistant(state.history[state.history.length-1].content);
+    statusEl.textContent='çevrimiçi';
+    saveHistory();
+  }
+
+  // Kısayol: Ctrl+Enter gönder
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)) send(); });
+</script>
+</body>
+</html>
